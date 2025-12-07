@@ -33,6 +33,8 @@ Frontend: HTML5, CSS3, JavaScript, Bootstrap 5
 
 Icons: Font Awesome
 
+
+
 **Step 1: Prepare Your Dataset**
 
 Collect cat and dog images
@@ -45,16 +47,17 @@ Put dog images in dogs/ folder
 
 Aim for 100+ images each
 
+
+
 **Step 2: Train Your Model**
 
 Use a pre-trained model (faster)
 
 Fine-tune it on your cat/dog images
 
+
 **Step 3: Test Your Model**
 Train for 10-20 rounds (epochs)
 
 Save the trained model as .h5 file
 
-
-**Step 3: Test Your Model**
