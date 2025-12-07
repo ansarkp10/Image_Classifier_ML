@@ -1,0 +1,304 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>CNN Image Classifier</title>
+
+  <!-- Bootstrap -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+  <!-- Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+
+  <style>
+    :root{
+      --bg:#f5f7fb;
+      --card:#ffffff;
+      --accent:#4361ee;
+      --accent-2:#4cc9f0;
+      --muted:#6c757d;
+      --radius:14px;
+      --shadow: 0 10px 30px rgba(20,20,50,0.06);
+    }
+
+    html,body{height:100%}
+    body{
+      background:var(--bg);
+      font-family: Inter, "Segoe UI", Roboto, system-ui, -apple-system, "Helvetica Neue", Arial;
+      color:#222;
+      padding:28px 12px;
+    }
+
+    .page-head{
+      max-width:1200px;
+      margin:0 auto 18px;
+      display:flex;
+      align-items:center;
+      gap:18px;
+    }
+    .brand {
+      display:flex;
+      gap:14px;
+      align-items:center;
+    }
+    .brand .logo{
+      width:64px;height:64px;border-radius:12px;
+      display:grid;place-items:center;color:white;
+      background:linear-gradient(135deg, var(--accent), #3a0ca3);
+      box-shadow:var(--shadow);
+      font-size:26px;
+    }
+    h1.title { font-size:28px; margin:0; }
+    p.lead { margin:0; color:var(--muted); }
+
+    .main {
+      max-width:1200px;
+      margin: 18px auto;
+      display:grid;
+      grid-template-columns: 1fr;
+      gap:18px;
+    }
+
+    /* Upload card */
+    .upload-card{
+      background:var(--card);
+      border-radius:var(--radius);
+      padding:18px;
+      box-shadow:var(--shadow);
+      display:flex;
+      gap:18px;
+      align-items:center;
+      flex-wrap:wrap;
+    }
+    .upload-left{flex:1}
+    .upload-right{width:260px}
+
+    .custom-drop{
+      border:2px dashed #e9eefc;
+      padding:18px;
+      border-radius:12px;
+      background:linear-gradient(180deg, #fff, #fbfdff);
+      text-align:center;
+      transition:all .2s;
+    }
+    .custom-drop:hover{ transform:translateY(-3px); box-shadow:0 12px 30px rgba(67,97,238,0.06); }
+
+    .btn-primary {
+      background:var(--accent);
+      border-color:var(--accent);
+      padding:10px 18px;
+      border-radius:999px;
+      box-shadow: none;
+      font-weight:600;
+    }
+    .btn-primary:hover{ background:#3148d0; border-color:#3148d0; transform:translateY(-2px) }
+
+    /* Results layout */
+    .result-grid{
+      display:grid;
+      grid-template-columns: 420px 1fr;
+      gap:20px;
+      align-items:start;
+    }
+    @media (max-width:980px){
+      .result-grid{ grid-template-columns: 1fr; }
+    }
+
+    .preview-card, .result-card{
+      background:var(--card);
+      border-radius:var(--radius);
+      padding:20px;
+      box-shadow:var(--shadow);
+    }
+
+    .preview-img{
+      width:100%;
+      height:320px;
+      object-fit:cover;
+      border-radius:10px;
+      box-shadow: 0 8px 24px rgba(10,10,40,0.06);
+      border: 6px solid #fff;
+    }
+    @media (max-width:580px){ .preview-img{ height:220px } }
+
+    .result-title { font-size:20px; margin-bottom:6px; color:var(--muted) }
+    .pred-label { font-size:28px; font-weight:800; color:var(--accent); margin-bottom:6px; }
+    .small-muted { color:var(--muted); font-size:14px }
+
+    .prob-bar {
+      height:18px;
+      background:#eef3ff;
+      border-radius:999px;
+      overflow:hidden;
+      margin:14px 0;
+    }
+    .prob-fill{
+      height:100%;
+      background: linear-gradient(90deg,var(--accent-2), var(--accent));
+      width:0%;
+      transition: width .9s cubic-bezier(.2,.9,.2,1);
+    }
+
+    .meta-row{ display:flex; gap:10px; flex-wrap:wrap; }
+    .meta { padding:10px 12px; background:#fbfcff; border-radius:10px; color:var(--muted); font-size:13px; }
+
+    .footer{
+      text-align:center; color:var(--muted); margin-top:28px; font-size:13px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="page-head">
+    <div class="brand">
+      <div class="logo"><i class="fa-solid fa-brain"></i></div>
+    </div>
+    <div>
+      <h1 class="title">CNN Image Classifier</h1>
+      <p class="lead">Upload an image and the model will predict whether it is a <strong>Dog</strong> or a <strong>Cat</strong>.</p>
+    </div>
+  </div>
+
+  <div class="main">
+
+    <!-- Upload area -->
+    <div class="upload-card">
+      <div class="upload-left">
+        <form method="POST" enctype="multipart/form-data" id="uploadForm">
+          {% csrf_token %}
+          <div class="custom-drop" id="dropArea">
+            <div style="display:flex;gap:12px;align-items:center;justify-content:center;">
+              <i class="fa-solid fa-file-image" style="font-size:28px;color:var(--accent)"></i>
+              <div style="text-align:left">
+                <div style="font-weight:700">Drag & drop or click to upload</div>
+                <div style="color:var(--muted); font-size:13px">JPG / PNG / GIF — recommended 100×100 (will be resized)</div>
+              </div>
+            </div>
+            <input id="fileInput" name="image" accept="image/*" type="file" style="opacity:0; position:absolute; inset:0; width:100%; height:100%; cursor:pointer;">
+          </div>
+
+          <div style="margin-top:14px; display:flex; gap:10px; flex-wrap:wrap;">
+            <button class="btn btn-primary" type="submit" id="predictButton"><i class="fa-solid fa-robot"></i> Predict</button>
+            <button type="button" id="clearBtn" class="btn btn-outline-secondary">Clear</button>
+            <div style="margin-left:auto; color:var(--muted); align-self:center; font-size:13px">
+              <i class="fa-solid fa-database"></i> Model: <strong>Custom CNN</strong>
+            </div>
+          </div>
+        </form>
+      </div>
+
+      <div class="upload-right text-center">
+        <div style="font-size:13px;color:var(--muted)">Try sample images</div>
+        <div style="display:grid; gap:8px; margin-top:12px">
+          <img src="https://images.unsplash.com/photo-1517423440428-a5a00ad493e8?auto=format&fit=crop&w=400&q=60" class="preview-thumb" alt="sample" style="width:100%; border-radius:8px; object-fit:cover; height:90px;">
+        </div>
+      </div>
+    </div>
+
+    <!-- Results: Image preview + Prediction -->
+    <div class="result-grid">
+      <!-- preview -->
+      <div class="preview-card">
+        <h5 style="margin-bottom:12px">Uploaded Image</h5>
+
+        {% if img_url %}
+          <img id="previewImage" class="preview-img" src="/{{ img_url }}" alt="Uploaded image">
+        {% else %}
+          <div style="display:grid;place-items:center; height:320px; color:var(--muted);">
+            <i class="fa-regular fa-image" style="font-size:48px; margin-bottom:8px;"></i>
+            <div>No image uploaded yet</div>
+            <div style="font-size:13px; color:var(--muted)">Upload to see preview and prediction</div>
+          </div>
+        {% endif %}
+      </div>
+
+      <!-- result card -->
+      <div class="result-card">
+        <div class="result-title">Prediction Results</div>
+
+        {% if prediction %}
+          <div class="pred-label">{{ prediction.name }}</div>
+          <div class="small-muted">Class ID: {{ prediction.class }}</div>
+
+          <div class="prob-bar">
+            <div id="probFill" class="prob-fill" style="width:0%"></div>
+          </div>
+          <div style="margin-top:8px; font-weight:700;"> <span id="probText">{{ prediction.probability }}%</span> confidence</div>
+
+          <div style="height:12px"></div>
+          <div class="meta-row">
+            <div class="meta"><i class="fa-solid fa-flask"></i> Model: Custom CNN</div>
+            <div class="meta"><i class="fa-solid fa-arrows-up-down-left-right"></i> Input: 100×100</div>
+            <div class="meta"><i class="fa-solid fa-dog"></i> Classes: Dog (0), Cat (1)</div>
+          </div>
+
+        {% else %}
+          <div style="color:var(--muted); padding:18px 0">No prediction yet — upload an image and click Predict.</div>
+        {% endif %}
+
+      </div>
+    </div>
+
+    <div class="footer">Built with Django & TensorFlow — © {{ now.year }}</div>
+  </div>
+
+  <!-- Bootstrap JS (optional) -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+  <script>
+    // file handling & preview
+    const dropArea = document.getElementById('dropArea');
+    const fileInput = document.getElementById('fileInput');
+    const previewImage = document.getElementById('previewImage');
+    const probFill = document.getElementById('probFill');
+    const probText = document.getElementById('probText');
+
+    // drag highlight
+    ['dragenter','dragover'].forEach(ev=>{
+      dropArea.addEventListener(ev, e=>{
+        e.preventDefault();
+        dropArea.style.borderColor = 'rgba(67,97,238,0.6)';
+        dropArea.style.boxShadow = '0 10px 30px rgba(67,97,238,0.06)';
+      });
+    });
+    ['dragleave','drop'].forEach(ev=>{
+      dropArea.addEventListener(ev, e=>{
+        dropArea.style.borderColor='';
+        dropArea.style.boxShadow='';
+      });
+    });
+
+    // preview local file
+    fileInput.addEventListener('change', (e)=>{
+      const f = e.target.files[0];
+      if(!f) return;
+      if(!f.type.startsWith('image/')) { alert('Please upload an image'); return; }
+      const reader = new FileReader();
+      reader.onload = function(ev){
+        if(previewImage) previewImage.src = ev.target.result;
+      };
+      reader.readAsDataURL(f);
+    });
+
+    // animate probability bar if prediction exists
+    document.addEventListener('DOMContentLoaded', function(){
+      {% if prediction %}
+        const pct = {{ prediction.probability|default:0 }};
+        if(probFill) {
+          setTimeout(()=>{ probFill.style.width = pct + '%'; }, 180);
+        }
+      {% endif %}
+    });
+
+    // Clear button
+    document.getElementById('clearBtn').addEventListener('click', ()=>{
+      // reset form and preview
+      const form = document.getElementById('uploadForm');
+      form.reset();
+      if(previewImage) previewImage.src = '';
+      probFill.style.width = '0%';
+    });
+  </script>
+</body>
+</html>
